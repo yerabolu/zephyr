@@ -46,9 +46,22 @@ extern void z_setup_new_thread(struct k_thread *new_thread,
 			      void *p1, void *p2, void *p3,
 			      int prio, u32_t options, const char *name);
 
-extern void z_new_thread_init(struct k_thread *thread,
-					    char *pStack, size_t stackSize,
-					    int prio, unsigned int options);
+static inline void z_new_thread_init(struct k_thread *thread,
+				     char *stack, size_t stack_size)
+{
+#if !defined(CONFIG_INIT_STACKS) && !defined(CONFIG_THREAD_STACK_INFO)
+	ARG_UNUSED(stack);
+	ARG_UNUSED(stack_size);
+	ARG_UNUSED(thread);
+#endif
+#ifdef CONFIG_INIT_STACKS
+	memset(stack, 0xaa, stack_size);
+#endif
+#if defined(CONFIG_THREAD_STACK_INFO)
+	thread->stack_info.start = (uintptr_t)stack;
+	thread->stack_info.size = stack_size;
+#endif /* CONFIG_THREAD_STACK_INFO */
+}
 
 /**
  * @brief Allocate some memory from the current thread's resource pool
@@ -123,6 +136,10 @@ extern struct k_thread z_idle_threads[CONFIG_MP_NUM_CPUS];
 #endif
 extern K_THREAD_STACK_ARRAY_DEFINE(z_interrupt_stacks, CONFIG_MP_NUM_CPUS,
 				   CONFIG_ISR_STACK_SIZE);
+
+#ifdef CONFIG_GEN_PRIV_STACKS
+extern u8_t *z_priv_stack_find(k_thread_stack_t *stack);
+#endif
 
 #ifdef __cplusplus
 }

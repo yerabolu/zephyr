@@ -454,7 +454,7 @@ static struct net_buf *smp_create_pdu(struct bt_smp *smp, u8_t op, size_t len)
 {
 	struct bt_smp_hdr *hdr;
 	struct net_buf *buf;
-	s32_t timeout;
+	k_timeout_t timeout;
 
 	/* Don't if session had already timed out */
 	if (atomic_test_bit(smp->flags, SMP_FLAG_TIMEOUT)) {
@@ -1139,7 +1139,7 @@ static struct net_buf *smp_br_create_pdu(struct bt_smp_br *smp, u8_t op,
 {
 	struct bt_smp_hdr *hdr;
 	struct net_buf *buf;
-	s32_t timeout;
+	k_timeout_t timeout;
 
 	/* Don't if session had already timed out */
 	if (atomic_test_bit(smp->flags, SMP_FLAG_TIMEOUT)) {
@@ -1823,10 +1823,13 @@ static void smp_pairing_complete(struct bt_smp *smp, u8_t status)
 	} else {
 		u8_t auth_err = auth_err_get(status);
 
-		/*
-		 * Clear the key pool entry in case of pairing failure.
+		/* Clear the key pool entry in case of pairing failure if the
+		 * keys already existed before the pairing procedure or the
+		 * pairing failed during key distribution.
 		 */
-		if (smp->chan.chan.conn->le.keys) {
+		if (smp->chan.chan.conn->le.keys &&
+		    (!smp->chan.chan.conn->le.keys->enc_size ||
+		     atomic_test_bit(smp->flags, SMP_FLAG_KEYS_DISTR))) {
 			bt_keys_clear(smp->chan.chan.conn->le.keys);
 			smp->chan.chan.conn->le.keys = NULL;
 		}
@@ -4403,6 +4406,16 @@ static void bt_smp_encrypt_change(struct bt_l2cap_chan *chan,
 		atomic_set_bit(&smp->allowed_cmds, BT_SMP_CMD_IDENT_INFO);
 	} else if (smp->remote_dist & BT_SMP_DIST_SIGN) {
 		atomic_set_bit(&smp->allowed_cmds, BT_SMP_CMD_SIGNING_INFO);
+	}
+
+	if (IS_ENABLED(CONFIG_BT_CENTRAL) &&
+	    IS_ENABLED(CONFIG_BT_PRIVACY) &&
+	    !(smp->remote_dist & BT_SMP_DIST_ID_KEY)) {
+		/* To resolve directed advertising we need our local IRK
+		 * in the controllers resolving list, add it now since the
+		 * peer has no identity key.
+		 */
+		bt_id_add(conn->le.keys);
 	}
 
 	atomic_set_bit(smp->flags, SMP_FLAG_KEYS_DISTR);
