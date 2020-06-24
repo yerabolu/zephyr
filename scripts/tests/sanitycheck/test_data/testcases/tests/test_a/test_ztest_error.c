@@ -10,7 +10,6 @@ void test_main(void)
                          ztest_unit_test(1a), ztest_unit_test(test_1b),
                          ztest_unit_test(test_1c)
                          );
-		ztest_run_test_suite(feature1);
 #endif
 
 #ifdef TEST_feature2

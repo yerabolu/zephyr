@@ -115,27 +115,34 @@ def test_get_unique_exception(testcase_root, workdir, name, exception):
 
 TESTDATA_5 = [
     ("testcases/tests/test_ztest.c", None, ['a', 'c', 'unit_a', 'newline', 'aa', 'user', 'last']),
-    ("testcases/tests/test_a/test_ztest_error.c", "Found a test that does not start with test_",  ['1a', '1c']),
+    ("testcases/tests/test_a/test_ztest_error.c", "Found a test that does not start with test_",  ['1a', '1c', '2a', '2b']),
+    ("testcases/tests/test_a/test_ztest_error_1.c", "found invalid #endif, #ifdef in ztest_test_suite()", ['unit_1a', 'unit_1b', 'Unit_1c']),
 ]
 
 @pytest.mark.parametrize("test_file, expected_warnings, expected_subcases", TESTDATA_5)
-def test_parse_subcases(test_data, test_file, expected_warnings, expected_subcases,):
+def test_scan_file(test_data, test_file, expected_warnings, expected_subcases):
     '''Testing subcases parsing and scan paths'''
     
     testcase = TestCase("/scripts/tests/sanitycheck/test_data/testcases/tests", ".", "test_a.check_1")
     
     results, warnings = testcase.scan_file(os.path.join(test_data, test_file))
 
-    assert warnings == expected_warnings
     assert results == expected_subcases
+    assert warnings == expected_warnings
 
-    #subcases = testcase.scan_path(test_data+'testcases/tests')
-    #assert subcases == expected_subcases
+def test_scan_path(test_data):
+    testcase = TestCase("/scripts/tests/sanitycheck/test_data/testcases/tests", ".", "test_a.check_1")
 
-    #testcase.id = "test_id"
-    #testcase.parse_subcases(test_data+'testcases/tests')
-
-    #assert testcase.cases == [testcase.id + '.' + x for x in expected_subcases]
+    subcases = testcase.scan_path(os.path.join(test_data, 'testcases/tests/test_a'))
+    expected_subcases = ['unit_1a', 'unit_1b', 'Unit_1c', '1a', '1c', '2a', '2b'] 
+    assert subcases == expected_subcases
+    
+    testcase.id = "test_id"
+    testcase.parse_subcases(test_data+'testcases/tests')
+    
+    parsed_subcases = ['a', 'c', 'unit_a', 'newline', 'aa', 'user', 'last']
+    
+    assert testcase.cases == [testcase.id + '.' + x for x in parsed_subcases]
 
 def test_parse_subcases_errors(test_data):
 

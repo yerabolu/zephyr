@@ -9,12 +9,3 @@
 			 ztest_user_unit_test(test_user),
 			 ztest_1cpu_unit_test(test_last));
 	ztest_run_test_suite(test_api);
-
-	ztest_test_suite(feature1,
-                         ztest_unit_test(test_1a),
-#ifdef CONFIG_WHATEVER 
-						 ztest_unit_test(test_1b),
-#endif
-                         ztest_unit_test(test_1c)
-                         );
-		ztest_run_test_suite(feature1);

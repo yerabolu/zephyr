@@ -1448,13 +1448,15 @@ Tests should reference the category and subsystem with a dot as a separator.
                 suite_run_match = suite_run_regex.search(main_c)
                 if not suite_run_match:
                     raise ValueError("can't find ztest_run_test_suite")
-
+                
                 achtung_matches = re.findall(
                     achtung_regex,
                     main_c[suite_regex_match.end():suite_run_match.start()])
+                print("achtung_matches",achtung_matches)
                 if achtung_matches:
                     warnings = "found invalid %s in ztest_test_suite()" \
                                % ", ".join({match.decode() for match in achtung_matches})
+                print("warnings:",warnings)
                 _matches = re.findall(
                     stc_regex,
                     main_c[suite_regex_match.end():suite_run_match.start()])
