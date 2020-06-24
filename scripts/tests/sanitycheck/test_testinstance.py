@@ -14,7 +14,7 @@ import pytest
 
 ZEPHYR_BASE = os.getenv("ZEPHYR_BASE")
 sys.path.insert(0, os.path.join(ZEPHYR_BASE, "scripts/sanity_chk"))
-from sanitylib import TestInstance, BuildError
+from sanitylib import TestCase, TestInstance, BuildError, SanityCheckException
 
 
 TESTDATA_1 = [
@@ -86,3 +86,63 @@ def test_calculate_sizes(class_testsuite, all_testcases_dict, platforms_list):
 
     with pytest.raises(BuildError):
         assert testinstance.calculate_sizes() == "Missing/multiple output ELF binary"
+
+TESTDATA_3 = [
+    (ZEPHYR_BASE + '/scripts/tests/sanitycheck/test_data/testcases', ZEPHYR_BASE, '/scripts/tests/sanitycheck/test_data/testcases/tests/test_a/test_a.check_1', '/scripts/tests/sanitycheck/test_data/testcases/tests/test_a/test_a.check_1'),
+    (ZEPHYR_BASE, '.', 'test_a.check_1', 'test_a.check_1'),
+    (ZEPHYR_BASE, '/scripts/tests/sanitycheck/test_data/testcases/test_b', 'test_b.check_1', '/scripts/tests/sanitycheck/test_data/testcases/test_b/test_b.check_1'),
+    (os.path.join(ZEPHYR_BASE, '/scripts/tests'), '.', 'test_b.check_1', 'test_b.check_1'),
+    (os.path.join(ZEPHYR_BASE, '/scripts/tests'), '.', '.', '.'),
+    (ZEPHYR_BASE, '.', 'test_a.check_1.check_2', 'test_a.check_1.check_2'),
+]
+@pytest.mark.parametrize("testcase_root, workdir, name, expected", TESTDATA_3)
+def test_get_unique(testcase_root, workdir, name, expected):
+    '''Test to check if the unique name is for given testcase root and workdir'''
+    unique = TestCase(testcase_root, workdir, name)
+    assert unique.name == expected
+
+TESTDATA_4 = [
+    (ZEPHYR_BASE, '.', 'test_c', 'Tests should reference the category and subsystem with a dot as a separator.'),
+    (os.path.join(ZEPHYR_BASE, '/scripts/tests'), '.', '', 'Tests should reference the category and subsystem with a dot as a separator.'),
+]
+@pytest.mark.parametrize("testcase_root, workdir, name, exception", TESTDATA_4)
+def test_get_unique_exception(testcase_root, workdir, name, exception):
+    '''Test to check if tests reference the category and subsystem with a dot as a separator'''
+
+    with pytest.raises(SanityCheckException):
+        unique = TestCase(testcase_root, workdir, name)
+        assert unique == exception
+
+TESTDATA_5 = [
+    ("testcases/tests/test_ztest.c", None, ['a', 'c', 'unit_a', 'newline', 'aa', 'user', 'last']),
+    ("testcases/tests/test_a/test_ztest_error.c", "Found a test that does not start with test_",  ['1a', '1c']),
+]
+
+@pytest.mark.parametrize("test_file, expected_warnings, expected_subcases", TESTDATA_5)
+def test_parse_subcases(test_data, test_file, expected_warnings, expected_subcases,):
+    '''Testing subcases parsing and scan paths'''
+    
+    testcase = TestCase("/scripts/tests/sanitycheck/test_data/testcases/tests", ".", "test_a.check_1")
+    
+    results, warnings = testcase.scan_file(os.path.join(test_data, test_file))
+
+    assert warnings == expected_warnings
+    assert results == expected_subcases
+
+    #subcases = testcase.scan_path(test_data+'testcases/tests')
+    #assert subcases == expected_subcases
+
+    #testcase.id = "test_id"
+    #testcase.parse_subcases(test_data+'testcases/tests')
+
+    #assert testcase.cases == [testcase.id + '.' + x for x in expected_subcases]
+
+def test_parse_subcases_errors(test_data):
+
+    #testcase = TestCase("/scripts/tests/sanitycheck/test_data/testcases/tests", ".", "test_a.check_1")
+    #with pytest.raises(ValueError):
+        #exception = testcase.scan_file(os.path.join(test_data, "testcases/tests/test_ztest_error.c"))
+        #assert exception == "can't find ztest_run_test_suite"
+    pass
+
+    
